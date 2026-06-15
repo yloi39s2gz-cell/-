@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>网上通讯录系统 - 校友中心</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <style>
+    body {
+      background-color: #f0f2f5;
+      margin: 0;
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", sans-serif;
+    }
+    .header-bar {
+      background: linear-gradient(90deg, #2b5876 0%, #4e4376 100%);
+      color: #fff;
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .main-container {
+      max-width: 1300px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .info-card {
+      border-radius: 12px;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+    }
+    .stat-container {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #606266;
+    }
+    .stat-item {
+      margin-right: 30px;
+    }
+    .stat-number {
+      font-size: 20px;
+      font-weight: bold;
+      color: #4e4376;
+      margin: 0 4px;
+    }
+    .el-tabs--border-card {
+      border-radius: 12px;
+      border: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .el-tabs--border-card > .el-tabs__header {
+      background-color: #fafafa;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .el-form-item__label {
+      font-weight: 500;
+    }
+    .el-input__inner, .el-textarea__inner {
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航栏 -->
+    <div class="header-bar">
+      <div class="header-title">网上通讯录系统 · 校友中心</div>
+      <div>
+        <span style="margin-right: 20px; font-size: 14px;">欢迎您，{{ profileForm.name || '同学' }}</span>
+        <el-button type="danger" size="mini" icon="el-icon-switch-button" @click="handleLogout" plain>安全退出</el-button>
+      </div>
+    </div>
+
+    <div class="main-container">
+      <!-- 个人信息统计悬浮卡 -->
+      <el-card class="info-card">
+        <div class="stat-container">
+          <div class="stat-item">
+            <i class="el-icon-data-line" style="font-size: 18px; margin-right: 5px; color: #4e4376;"></i>
+            累计登录访问：<span class="stat-number">{{ user.loginCount }}</span> 次
+          </div>
+          <div class="stat-item">
+            <i class="el-icon-time" style="font-size: 18px; margin-right: 5px; color: #4e4376;"></i>
+            最近一次访问：<el-tag type="success" size="small" style="font-weight: bold;">{{ user.lastLoginTime || '首次登录' }}</el-tag>
+          </div>
+        </div>
+      </el-card>
+
+      <!-- 核心功能标签页 -->
+      <el-tabs v-model="activeTab" type="border-card">
+        <!-- 检索校友 -->
+        <el-tab-pane name="directory">
+          <span slot="label"><i class="el-icon-search"></i> 检索同学通讯录</span>
+          <div style="margin: 15px 0 25px 0; display: flex;">
+            <el-input 
+              v-model="searchQuery" 
+              placeholder="按姓名、所在城市或当前就业单位查询" 
+              prefix-icon="el-icon-search"
+              style="width: 400px; margin-right: 15px;"
+              clearable
+              @clear="fetchDirectory"
+            ></el-input>
+            <el-button type="primary" icon="el-icon-search" style="border-radius: 6px; background-color: #4e4376; border-color: #4e4376;" @click="fetchDirectory">开始检索</el-button>
+          </div>
+
+          <el-table :data="directoryList" stripe style="width: 100%; border-radius: 8px;">
+            <el-table-column prop="name" label="姓名" width="100" font-weight="bold"></el-table-column>
+            <el-table-column prop="majorName" label="专业"></el-table-column>
+            <el-table-column prop="className" label="班级" width="120"></el-table-column>
+            <el-table-column prop="enrollYear" label="入校年份" width="100"></el-table-column>
+            <el-table-column prop="gradYear" label="毕业年份" width="100"></el-table-column>
+            <el-table-column prop="company" label="就业单位"></el-table-column>
+            <el-table-column prop="city" label="工作城市" width="120"></el-table-column>
+            <el-table-column prop="phone" label="联系电话" width="140"></el-table-column>
+            <el-table-column prop="email" label="电子邮箱"></el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 个人资料维护 -->
+        <el-tab-pane name="profile">
+          <span slot="label"><i class="el-icon-edit-outline"></i> 完善我的通讯录名片</span>
+          <el-form :model="profileForm" label-width="100px" style="max-width: 600px; margin: 20px 0;">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="真实姓名">
+                  <el-input v-model="profileForm.name"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="所属专业">
+                  <el-select v-model="profileForm.majorId" placeholder="选择专业" style="width: 100%;">
+                    <el-option v-for="m in majors" :key="m.id" :label="m.majorName" :value="m.id"></el-option>
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="班级">
+                  <el-input v-model="profileForm.className" placeholder="如：物联网2班"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="入学年份" label-width="80px">
+                  <el-input-number v-model="profileForm.enrollYear" :min="1990" :max="2100" controls-position="right" style="width: 100%;"></el-input-number>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="毕业年份" label-width="80px">
+                  <el-input-number v-model="profileForm.gradYear" :min="1990" :max="2100" controls-position="right" style="width: 100%;"></el-input-number>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-form-item label="就业单位">
+              <el-input v-model="profileForm.company" placeholder="当前工作公司名称、或就读研究生学校名称"></el-input>
+            </el-form-item>
+
+            <el-form-item label="工作城市">
+              <el-input v-model="profileForm.city" placeholder="如：深圳"></el-input>
+            </el-form-item>
+
+            <el-form-item label="移动电话">
+              <el-input v-model="profileForm.phone"></el-input>
+            </el-form-item>
+
+            <el-form-item label="电子邮箱">
+              <el-input v-model="profileForm.email"></el-input>
+            </el-form-item>
+
+            <el-form-item style="margin-top: 30px;">
+              <el-button type="primary" style="background-color: #4e4376; border-color: #4e4376; padding: 12px 30px;" @click="saveProfile">更 新 名 片 信 息</el-button>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          activeTab: 'directory',
+          user: {},
+          searchQuery: '',
+          directoryList: [],
+          majors: [],
+          profileForm: {
+            userId: null, name: '', majorId: null, className: '',
+            enrollYear: 2020, gradYear: 2024, company: '', city: '', phone: '', email: ''
+          }
+        };
+      },
+      created() {
+        this.user = JSON.parse(localStorage.getItem('user') || '{}');
+        this.profileForm.userId = this.user.id;
+        this.fetchMajors();
+        this.fetchProfile();
+        this.fetchDirectory();
+      },
+      methods: {
+        fetchMajors() {
+          axios.get('http://localhost:8080/api/student/majors')
+            .then(res => { this.majors = res.data; });
+        },
+        fetchProfile() {
+          axios.get('http://localhost:8080/api/student/profile/' + this.user.id)
+            .then(res => { if (res.data) this.profileForm = res.data; });
+        },
+        fetchDirectory() {
+          axios.get('http://localhost:8080/api/student/directory', { params: { query: this.searchQuery } })
+            .then(res => { this.directoryList = res.data; });
+        },
+        saveProfile() {
+          axios.put('http://localhost:8080/api/student/profile', this.profileForm)
+            .then(() => {
+              this.$message.success('您的个人通讯名片已顺利保存更新！');
+              this.fetchDirectory();
+            });
+        },
+        handleLogout() {
+          localStorage.removeItem('user');
+          window.location.href = 'index.html';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

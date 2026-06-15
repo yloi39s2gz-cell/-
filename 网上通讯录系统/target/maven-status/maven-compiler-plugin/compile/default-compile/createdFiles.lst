@@ -1,0 +1,7 @@
+com\example\AdminController.class
+com\example\StudentDao.class
+com\example\AuthController.class
+com\example\StudentController.class
+com\example\Application.class
+com\example\UserDao.class
+com\example\DBUtil.class
